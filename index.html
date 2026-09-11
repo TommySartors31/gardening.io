@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gardening.io — 3D Garden Party</title>
+
+  <style>
+    :root {
+      --ink: #153044;
+      --panel: rgba(13, 34, 48, 0.75);
+      --panel-border: rgba(255, 255, 255, 0.22);
+      --white: #f9fff5;
+      --mint: #a9ffbd;
+      --gold: #ffe278;
+      --pink: #ff9fc3;
+      --danger: #ff7993;
+      --shadow: rgba(11, 39, 49, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Trebuchet MS", Arial, sans-serif;
+      background: #75d8ff;
+      color: var(--white);
+    }
+
+    body {
+      touch-action: none;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    #game {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      isolation: isolate;
+      user-select: none;
+    }
+
+    /* ---------- SKY / ATMOSPHERE ---------- */
+
+    .sky {
+      position: absolute;
+      inset: 0;
+      z-index: -10;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 75% 17%, #fff6ad 0 4.7%, rgba(255, 255, 205, 0.25) 4.8% 7.5%, transparent 7.6%),
+        linear-gradient(#69cdff 0%, #a6e6ff 57%, #d6f6ff 100%);
+      transition: filter 0.4s ease;
+    }
+
+    .sky::before,
+    .sky::after {
+      content: "";
+      position: absolute;
+      width: 210px;
+      height: 43px;
+      border-radius: 100px;
+      background: rgba(255, 255, 255, 0.74);
+      filter: blur(0.5px);
+      animation: clouds 31s linear infinite;
+    }
+
+    .sky::before {
+      left: -250px;
+      top: 15%;
+      box-shadow:
+        61px -18px 0 13px rgba(255, 255, 255, 0.74),
+        133px -1px 0 8px rgba(255, 255, 255, 0.74),
+        612px 165px 0 2px rgba(255, 255, 255, 0.56),
+        664px 149px 0 16px rgba(255, 255, 255, 0.56);
+    }
+
+    .sky::after {
+      left: -420px;
+      top: 36%;
+      width: 160px;
+      height: 32px;
+      opacity: 0.6;
+      animation-delay: -14s;
+      animation-duration: 43s;
+      box-shadow:
+        48px -14px 0 9px rgba(255, 255, 255, 0.8),
+        105px 1px 0 4px rgba(255, 255, 255, 0.8);
+    }
+
+    @keyframes clouds {
+      to {
+        transform: translateX(calc(100vw + 760px));
+      }
+    }
+
+    .mountains {
+      position: absolute;
+      z-index: -8;
+      left: -10%;
+      right: -10%;
+      bottom: 21%;
+      height: 40%;
+      opacity: 0.45;
+      background:
+        linear-gradient(135deg, transparent 49.5%, #5eaf9d 50%) 0 100% / 28% 100%,
+        linear-gradient(45deg, transparent 49.5%, #6ebb9d 50%) 21% 100% / 32% 100%,
+        linear-gradient(135deg, transparent 49.5%, #4e9c88 50%) 47% 100% / 33% 100%,
+        linear-gradient(45deg, transparent 49.5%, #6fb69b 50%) 68% 100% / 31% 100%;
+    }
+
+    .night-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 45;
+      pointer-events: none;
+      background: rgba(9, 20, 55, 0);
+      mix-blend-mode: multiply;
+      transition: background 0.2s linear;
+    }
+
+    .stars {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      opacity: 0;
+      background:
+        radial-gradient(circle, white 0 1px, transparent 1.8px) 8px 18px / 91px 127px,
+        radial-gradient(circle, #d5e7ff 0 1.5px, transparent 2px) 28px 50px / 137px 96px,
+        radial-gradient(circle, white 0 1px, transparent 1.7px) 72px 13px / 69px 164px;
+      transition: opacity 0.8s ease;
+      animation: stars 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes stars {
+      to {
+        filter: brightness(1.7);
+      }
+    }
+
+    /* ---------- HUD ---------- */
+
+    .hud {
+      position: fixed;
+      z-index: 100;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .logo,
+    .stats,
+    .control-help,
+    .time-card,
+    .shop {
+      border: 1px solid var(--panel-border);
+      background: var(--panel);
+      box-shadow: 0 13px 38px var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .logo {
+      padding: 11px 15px;
+      border-radius: 18px;
+    }
+
+    .logo small {
+      display: block;
+      color: #b9ffd2;
+      font-size: 0.64rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+    }
+
+    .logo h1 {
+      margin: 2px 0 0;
+      font-size: clamp(1.35rem, 3.5vw, 2rem);
+      line-height: 1;
+      letter-spacing: -0.06em;
+    }
+
+    .stats {
+      display: flex;
+      gap: 12px;
+      padding: 10px 13px;
+      border-radius: 17px;
+      pointer-events: auto;
+    }
+
+    .stat {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 900;
+      font-size: 0.98rem;
+    }
+
+    .stat span {
+      font-size: 1.16rem;
+    }
+
+    .stat strong {
+      color: var(--gold);
+    }
+
+    .control-help {
+      position: fixed;
+      z-index: 90;
+      top: 91px;
+      right: 14px;
+      max-width: 265px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      color: #d9eced;
+      font-size: 0.76rem;
+      line-height: 1.45;
+      pointer-events: none;
+    }
+
+    .control-help strong {
+      color: var(--mint);
+    }
+
+    /* ---------- 3D-STYLE WORLD ---------- */
+
+    .world-viewport {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      perspective: 1150px;
+    }
+
+    #world {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(1360px, 145vw);
+      height: min(910px, 118vw);
+      transform: translate(-50%, -50%);
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+
+    .island {
+      position: absolute;
+      left: 4%;
+      top: 7%;
+      width: 92%;
+      height: 86%;
+      border: 18px solid #72c36a;
+      border-radius: 44% 50% 48% 47%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 15% 18%, rgba(234, 255, 162, 0.48) 0 0.8%, transparent 0.9%),
+        radial-gradient(circle at 69% 23%, rgba(234, 255, 162, 0.37) 0 0.7%, transparent 0.8%),
+        radial-gradient(circle at 81% 71%, rgba(234, 255, 162, 0.38) 0 0.9%, transparent 1%),
+        radial-gradient(circle at 39% 83%, rgba(234, 255, 162, 0.34) 0 0.8%, transparent 0.9%),
+        linear-gradient(135deg, #99e573, #53c566 60%, #43ad5e);
+      box-shadow:
+        inset 0 0 0 7px rgba(226, 255, 167, 0.28),
+        0 30px 0 #2a7b48,
+        0 46px 48px rgba(0, 39, 35, 0.35);
+    }
+
+    .island::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0.33;
+      background-image:
+        radial-gradient(ellipse, #3c9d54 0 1px, transparent 1.6px),
+        radial-gradient(ellipse, #e7ffad 0 1px, transparent 1.6px);
+      background-size: 27px 35px, 39px 47px;
+      background-position: 6px 3px, 17px 11px;
+    }
+
+    .path {
+      position: absolute;
+      z-index: 4;
+      left: 47%;
+      top: -10%;
+      width: 15%;
+      height: 123%;
+      border-radius: 50%;
+      transform: rotate(-6deg);
+      background:
+        radial-gradient(circle at 30% 9%, #f9d48d 0 4%, transparent 4.5%),
+        radial-gradient(circle at 74% 24%, #e9b66d 0 3.3%, transparent 4%),
+        radial-gradient(circle at 27% 54%, #ffe3aa 0 3.5%, transparent 4.2%),
+        radial-gradient(circle at 78% 81%, #d99f59 0 3.4%, transparent 4.1%),
+        #eec477;
+      box-shadow: inset 5px 0 rgba(255, 240, 182, 0.31);
+    }
+
+    .pond {
+      position: absolute;
+      z-index: 6;
+      left: 8%;
+      top: 17%;
+      width: 25%;
+      height: 28%;
+      border: 12px solid #b2f2bf;
+      border-radius: 47% 53% 42% 58%;
+      background:
+        radial-gradient(circle at 27% 31%, rgba(255, 255, 255, 0.69) 0 2%, transparent 2.8%),
+        radial-gradient(circle at 68% 60%, rgba(255, 255, 255, 0.53) 0 1.7%, transparent 2.5%),
+        repeating-radial-gradient(ellipse at center, #8cf1ee 0 8%, #50cddb 9% 17%);
+      box-shadow:
+        inset 0 0 24px #208ca4,
+        0 7px 0 rgba(28, 111, 87, 0.24);
+      animation: pondPulse 3.8s ease-in-out infinite alternate;
+    }
+
+    @keyframes pondPulse {
+      to {
+        filter: brightness(1.11) saturate(1.2);
+      }
+    }
+
+    .bridge {
+      position: absolute;
+      z-index: 8;
+      left: 23%;
+      top: 33%;
+      width: 19%;
+      height: 7%;
+      border: 4px solid #874a2b;
+      border-radius: 12px;
+      transform: rotate(-22deg);
+      background: repeating-linear-gradient(90deg, #c8793e 0 14px, #efae62 15px 26px);
+      box-shadow: 0 5px 0 #6e3a28;
+    }
+
+    .tree {
+      position: absolute;
+      z-index: 12;
+      width: 12%;
+      aspect-ratio: 0.75;
+      transform-origin: center bottom;
+      animation: treeSway 3.5s ease-in-out infinite alternate;
+      pointer-events: none;
+    }
+
+    .tree::before {
+      content: "";
+      position: absolute;
+      left: 38%;
+      bottom: 0;
+      width: 24%;
+      height: 48%;
+      border-radius: 13px;
+      background: linear-gradient(90deg, #783f26, #bd7a3c, #733d27);
+      box-shadow: inset 4px 0 rgba(255, 221, 152, 0.25);
+    }
+
+    .tree::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 72%;
+      border-radius: 46% 53% 45% 55%;
+      background:
+        radial-gradient(circle at 31% 27%, #d0ff9a 0 10%, transparent 11%),
+        radial-gradient(circle at 69% 37%, #95eb6e 0 13%, transparent 14%),
+        radial-gradient(circle at 47% 63%, #52bf60 0 19%, transparent 20%),
+        linear-gradient(135deg, #98e97a, #3ca859);
+      box-shadow:
+        inset -8px -11px rgba(21, 111, 62, 0.22),
+        0 7px 0 rgba(26, 101, 57, 0.22);
+    }
+
+    @keyframes treeSway {
+      from {
+        transform: rotate(-2deg);
+      }
+
+      to {
+        transform: rotate(2deg);
+      }
+    }
+
+    .tree.a { left: 6%; top: 51%; }
+    .tree.b { left: 78%; top: 14%; width: 14%; animation-delay: -1.2s; }
+    .tree.c { left: 80%; top: 68%; width: 9%; animation-delay: -2s; }
+    .tree.d { left: 37%; top: 10%; width: 8%; animation-delay: -0.7s; }
+
+    .flower-patch {
+      position: absolute;
+      z-index: 8;
+      width: 10%;
+      height: 9%;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 20% 25%, #fff8a7 0 9%, #ff79bf 10% 18%, transparent 19%),
+        radial-gradient(circle at 52% 60%, #fff8a7 0 9%, #a57dff 10% 18%, transparent 19%),
+        radial-gradient(circle at 82% 28%, #fff8a7 0 9%, #ff778c 10% 18%, transparent 19%),
+        radial-gradient(circle at 28% 78%, #fff8a7 0 9%, #ff8c4a 10% 18%, transparent 19%);
+      filter: drop-shadow(0 3px 0 rgba(39, 127, 67, 0.38));
+      animation: flowers 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes flowers {
+      to {
+        transform: scale(1.08) rotate(3deg);
+      }
+    }
+
+    .flowers-a { left: 33%; top: 20%; }
+    .flowers-b { left: 65%; top: 73%; animation-delay: -0.9s; }
+    .flowers-c { left: 13%; top: 66%; width: 7%; height: 7%; animation-delay: -1.3s; }
+
+    /* ---------- GARDEN BEDS ---------- */
+
+    .garden-bed {
+      position: absolute;
+      z-index: 16;
+      width: 27%;
+      height: 26%;
+      padding: 8px;
+      border: 10px solid #9d5d35;
+      border-radius: 15px;
+      background: #79452d;
+      box-shadow:
+        inset 0 0 0 3px #e3a35b,
+        0 9px 0 rgba(83, 44, 26, 0.29);
+    }
+
+    .bed-a {
+      left: 13%;
+      top: 54%;
+      transform: rotate(-8deg);
+    }
+
+    .bed-b {
+      left: 61%;
+      top: 47%;
+      transform: rotate(8deg);
+    }
+
+    .bed-c {
+      left: 36%;
+      top: 69%;
+      transform: rotate(2deg);
+      width: 23%;
+      height: 20%;
+    }
+
+    .plots {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 4px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .plot {
+      position: relative;
+      min-width: 0;
+      border: 1px solid rgba(255, 226, 179, 0.15);
+      border-radius: 7px;
+      background: rgba(65, 29, 17, 0.3);
+      cursor: pointer;
+      transition: transform 0.14s ease, filter 0.14s ease;
+    }
+
+    .plot:hover {
+      transform: translateY(-2px) scale(1.08);
+      filter: brightness(1.16);
+    }
+
+    .plot[data-state="seed"]::after {
+      content: "•";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      color: #f3ca83;
+      font-size: 1.8rem;
+      transform: translate(-50%, -55%);
+      animation: seedPulse 1s ease-in-out infinite alternate;
+    }
+
+    .plot[data-state="sprout"]::after {
+      content: "🌱";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      font-size: clamp(1rem, 2.7vw, 2rem);
+      transform: translate(-50%, -56%);
+      filter: drop-shadow(0 3px 1px rgba(21, 75, 32, 0.5));
+      animation: cropSway 1.5s ease-in-out infinite alternate;
+    }
+
+    .plot[data-state="ready"]::after {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      font-size: clamp(1rem, 3.1vw, 2.35rem);
+      transform: translate(-50%, -56%);
+      filter: drop-shadow(0 3px 1px rgba(21, 75, 32, 0.47));
+      animation: cropBounce 1.05s ease-in-out infinite alternate;
+    }
+
+    .plot[data-crop="carrot"][data-state="ready"]::after { content: "🥕"; }
+    .plot[data-crop="strawberry"][data-state="ready"]::after { content: "🍓"; }
+    .plot[data-crop="tulip"][data-state="ready"]::after { content: "🌷"; }
+    .plot[data-crop="pumpkin"][data-state="ready"]::after { content: "🎃"; }
+    .plot[data-crop="corn"][data-state="ready"]::after { content: "🌽"; }
+    .plot[data-crop="watermelon"][data-state="ready"]::after { content: "🍉"; }
+    .plot[data-crop="blueberry"][data-state="ready"]::after { content: "🫐"; }
+    .plot[data-crop="sunflower"][data-state="ready"]::after { content: "🌻"; }
+    .plot[data-crop="mushroom"][data-state="ready"]::after { content: "🍄"; }
+    .plot[data-crop="cactus"][data-state="ready"]::after { content: "🌵"; }
+    .plot[data-crop="grape"][data-state="ready"]::after { content: "🍇"; }
+    .plot[data-crop="crystal"][data-state="ready"]::after { content: "💎"; }
+
+    @keyframes seedPulse {
+      to {
+        transform: translate(-50%, -60%) scale(1.2);
+      }
+    }
+
+    @keyframes cropSway {
+      to {
+        transform: translate(-50%, -56%) rotate(7deg);
+      }
+    }
+
+    @keyframes cropBounce {
+      to {
+        transform: translate(-50%, -62%) rotate(4deg) scale(1.08);
+      }
+    }
+
+    /* ---------- RAKING AREA ---------- */
+
+    .rake-zone {
+      position: absolute;
+      z-index: 19;
+      left: 65%;
+      top: 16%;
+      width: 24%;
+      height: 24%;
+      overflow: hidden;
+      border: 10px solid #d6b77b;
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at 20% 24%, rgba(255, 255, 255, 0.32) 0 1.5%, transparent 2%),
+        radial-gradient(circle at 68% 51%, rgba(255, 255, 255, 0.27) 0 1.3%, transparent 2%),
+        linear-gradient(145deg, #c9c1b3, #a8a096);
+      box-shadow:
+        inset 0 0 0 4px rgba(255, 239, 193, 0.35),
+        0 8px 0 rgba(84, 73, 65, 0.24);
+      cursor: pointer;
+      transition: transform 0.2s ease, filter 0.2s ease;
+    }
+
+    .rake-zone:hover {
+      transform: scale(1.04);
+      filter: brightness(1.08);
+    }
+
+    .rake-zone::before {
+      content: "GRAVEL GARDEN";
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      bottom: 7px;
+      transform: translateX(-50%);
+      width: max-content;
+      padding: 4px 7px;
+      border-radius: 999px;
+      color: #5a4d45;
+      background: rgba(255, 252, 230, 0.72);
+      font-size: 0.52rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+    }
+
+    .gravel-lines {
+      position: absolute;
+      inset: -20%;
+      background:
+        repeating-radial-gradient(ellipse at 50% 50%, transparent 0 14px, rgba(255, 249, 217, 0.7) 15px 18px, transparent 19px 29px);
+      transform: rotate(-12deg);
+      opacity: 0.46;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .rake-zone.active .gravel-lines {
+      opacity: 0.98;
+      transform: rotate(-8deg) scale(1.11);
+    }
+
+    .rake-stone {
+      position: absolute;
+      z-index: 2;
+      width: 17%;
+      aspect-ratio: 1.1;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f0eee5, #97918c);
+      box-shadow: 0 3px 0 rgba(64, 56, 50, 0.23);
+    }
+
+    .stone-a { left: 22%; top: 31%; }
+    .stone-b { right: 15%; top: 48%; width: 12%; }
+    .stone-c { left: 45%; top: 16%; width: 10%; }
+
+    /* ---------- PLAYER ---------- */
+
+    #player {
+      position: absolute;
+      z-index: 40;
+      left: 49%;
+      top: 47%;
+      width: 8%;
+      aspect-ratio: 0.65;
+      transform: translate(-50%, -50%);
+      transform-origin: center bottom;
+      pointer-events: none;
+      transition: filter 0.25s ease;
+    }
+
+    .player-shadow {
+      position: absolute;
+      bottom: -4%;
+      left: 7%;
+      width: 88%;
+      height: 18%;
+      border-radius: 50%;
+      background: rgba(20, 75, 44, 0.36);
+      filter: blur(3px);
+    }
+
+    .player-legs {
+      position: absolute;
+      z-index: 1;
+      left: 24%;
+      bottom: 5%;
+      width: 52%;
+      height: 25%;
+      background:
+        linear-gradient(90deg, #5a7ce9 0 35%, transparent 35% 61%, #5a7ce9 61% 100%);
+      border-radius: 0 0 10px 10px;
+    }
+
+    .player-body {
+      position: absolute;
+      z-index: 3;
+      left: 18%;
+      bottom: 23%;
+      width: 65%;
+      height: 53%;
+      border: 3px solid rgba(122, 47, 65, 0.22);
+      border-radius: 40% 40% 27% 27%;
+      background: linear-gradient(90deg, #ff94b7, #ff6fa5 54%, #d94a7b);
+      box-shadow: inset 7px 0 rgba(255, 223, 232, 0.26);
+    }
+
+    .player-head {
+      position: absolute;
+      z-index: 5;
+      top: 13%;
+      left: 16%;
+      width: 68%;
+      aspect-ratio: 0.95;
+      border: 3px solid rgba(125, 77, 60, 0.2);
+      border-radius: 45%;
+      background: #ffd2a9;
+    }
+
+    .player-hair {
+      position: absolute;
+      z-index: 6;
+      top: 6%;
+      left: 10%;
+      width: 80%;
+      height: 35%;
+      border-radius: 55% 55% 34% 34%;
+      background: #69372f;
+      box-shadow: inset 11px 0 rgba(255, 177, 114, 0.15);
+    }
+
+    .player-hat {
+      position: absolute;
+      z-index: 9;
+      top: -3%;
+      left: -1%;
+      width: 102%;
+      height: 27%;
+      border: 3px solid rgba(132, 93, 30, 0.26);
+      border-radius: 48% 48% 28% 28%;
+      background: #f8d664;
+      box-shadow: inset 0 -6px rgba(195, 138, 37, 0.28);
+    }
+
+    .player-hat::after {
+      content: "";
+      position: absolute;
+      left: -15%;
+      bottom: -5px;
+      width: 130%;
+      height: 24%;
+      border: 2px solid rgba(132, 93, 30, 0.22);
+      border-radius: 50%;
+      background: #f7c94f;
+    }
+
+    .player-face {
+      position: absolute;
+      z-index: 8;
+      top: 43%;
+      left: 35%;
+      display: flex;
+      gap: 12px;
+    }
+
+    .player-face::before,
+    .player-face::after {
+      content: "";
+      width: 4px;
+      height: 6px;
+      border-radius: 9px;
+      background: #5d3c38;
+    }
+
+    .walking #player {
+      animation: characterWalk 0.24s ease-in-out infinite alternate;
+    }
+
+    .walking .player-body {
+      animation: bodyBounce 0.24s ease-in-out infinite alternate;
+    }
+
+    @keyframes characterWalk {
+      to {
+        transform: translate(-50%, -52%) rotate(-2deg);
+      }
+    }
+
+    @keyframes bodyBounce {
+      to {
+        transform: rotate(3deg);
+      }
+    }
+
+    .raking #player {
+      animation: rakeBob 0.38s ease-in-out infinite alternate;
+    }
+
+    .raking #player::after {
+      content: "";
+      position: absolute;
+      z-index: 20;
+      width: 11px;
+      height: 104%;
+      left: 98%;
+      bottom: -8%;
+      border-radius: 8px;
+      transform: rotate(-27deg);
+      transform-origin: bottom center;
+      background: linear-gradient(90deg, #a96536, #f1c076, #9b572e);
+      box-shadow: 5px 3px 0 -1px #5f5a57;
+      animation: rakeMove 0.38s ease-in-out infinite alternate;
+    }
+
+    @keyframes rakeBob {
+      to {
+        transform: translate(-50%, -55%) rotate(4deg);
+      }
+    }
+
+    @keyframes rakeMove {
+      to {
+        transform: rotate(25deg);
+      }
+    }
+
+    /* ---------- BOTTOM UI ---------- */
+
+    .bottom-ui {
+      position: fixed;
+      z-index: 110;
+      left: 14px;
+      right: 14px;
+      bottom: 14px;
+      display: grid;
+      grid-template-columns: minmax(180px, 270px) 1fr minmax(180px, 245px);
+      gap: 12px;
+      align-items: end;
+      pointer-events: none;
+    }
+
+    .shop {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px;
+      border-radius: 19px;
+      overflow-x: auto;
+      pointer-events: auto;
+      scrollbar-width: none;
+    }
+
+    .shop::-webkit-scrollbar {
+      display: none;
+    }
+
+    .seed-button {
+      min-width: 82px;
+      padding: 8px 7px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 14px;
+      color: white;
+      background: rgba(255, 255, 255, 0.07);
+      cursor: pointer;
+      transition: transform 0.17s ease, background 0.17s ease, opacity 0.17s ease;
+    }
+
+    .seed-button:hover:not(:disabled) {
+      transform: translateY(-6px) scale(1.05);
+      background: rgba(255, 255, 255, 0.17);
+    }
+
+    .seed-button:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .seed-button.selected {
+      border-color: #a8ffc0;
+      background: rgba(89, 230, 137, 0.2);
+      box-shadow: 0 0 0 3px rgba(89, 230, 137, 0.17);
+    }
+
+    .seed-icon {
+      display: block;
+      font-size: 1.38rem;
+    }
+
+    .seed-name {
+      display: block;
+      margin-top: 3px;
+      font-size: 0.64rem;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .seed-cost {
+      display: block;
+      margin-top: 2px;
+      color: var(--gold);
+      font-size: 0.61rem;
+      font-weight: 900;
+    }
+
+    .time-card,
+    .tip-card {
+      padding: 12px 13px;
+      border-radius: 16px;
+      color: #d9f1e0;
+      font-size: 0.76rem;
+      line-height: 1.38;
+    }
+
+    .tip-card strong {
+      color: var(--mint);
+    }
+
+    .time-card {
+      text-align: right;
+    }
+
+    .time-card small {
+      display: block;
+      color: #d8e8f3;
+      font-size: 0.63rem;
+      font-weight: 900;
+      letter-spacing: 0.09em;
+    }
+
+    .time-card strong {
+      display: block;
+      margin-top: 3px;
+      color: #fff6b3;
+      font-size: 0.98rem;
+    }
+
+    .time-track {
+      width: 100%;
+      height: 6px;
+      margin-top: 8px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .time-fill {
+      width: 35%;
+      height: 100%;
+      border-radius: 99px;
+      background: linear-gradient(90deg, #7766df, #ffce7c, #78e7ff);
+    }
+
+    .prompt {
+      position: fixed;
+      z-index: 150;
+      left: 50%;
+      bottom: 132px;
+      max-width: min(400px, calc(100vw - 36px));
+      padding: 11px 15px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 999px;
+      color: #153044;
+      background: #fff1ae;
+      box-shadow: 0 8px 25px rgba(38, 38, 20, 0.25);
+      font-size: 0.82rem;
+      font-weight: 900;
+      text-align: center;
+      transform: translateX(-50%) translateY(16px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    .prompt.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .float-text {
+      position: fixed;
+      z-index: 220;
+      pointer-events: none;
+      color: #fff8a9;
+      font-weight: 900;
+      font-size: 1.1rem;
+      text-shadow: 0 3px 3px rgba(20, 57, 44, 0.55);
+      animation: floatText 1s ease-out forwards;
+    }
+
+    @keyframes floatText {
+      from {
+        opacity: 0;
+        transform: translate(-50%, 5px) scale(0.75);
+      }
+
+      20% {
+        opacity: 1;
+      }
+
+      to {
+        opacity: 0;
+        transform: translate(-50%, -63px) scale(1.1);
+      }
+    }
+
+    .particle {
+      position: fixed;
+      z-index: 210;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      pointer-events: none;
+      animation: particle 0.75s ease-out forwards;
+    }
+
+    @keyframes particle {
+      to {
+        opacity: 0;
+        transform: translate(var(--x), var(--y)) scale(0.2);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .control-help,
+      .tip-card,
+      .time-card {
+        display: none;
+      }
+
+      .bottom-ui {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .hud {
+        top: 9px;
+        left: 9px;
+        right: 9px;
+      }
+
+      .logo {
+        padding: 9px 11px;
+      }
+
+      .stats {
+        gap: 7px;
+        padding: 9px 10px;
+      }
+
+      .world-viewport {
+        perspective: 850px;
+      }
+
+      #world {
+        width: 186vw;
+        height: 137vw;
+      }
+
+      .bottom-ui {
+        left: 9px;
+        right: 9px;
+        bottom: 9px;
+      }
+
+      .shop {
+        justify-content: flex-start;
+      }
+
+      .seed-button {
+        min-width: 76px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main id="game">
+    <div class="sky"></div>
+    <div class="mountains"></div>
+    <div class="stars" id="stars"></div>
+    <div class="night-overlay" id="nightOverlay"></div>
+
+    <header class="hud">
+      <div class="logo">
+        <small>RUN • GROW • RAKE • COLLECT</small>
+        <h1>Gardening.io</h1>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><span>🪙</span><strong id="coins">30</strong></div>
+        <div class="stat"><span>🌱</span><strong id="planted">0</strong></div>
+        <div class="stat"><span>⭐</span><strong id="level">1</strong></div>
+      </div>
+    </header>
+
+    <aside class="control-help">
+      <strong>Run around:</strong> WASD or arrow keys.<br />
+      Click soil plots to plant or harvest.<br />
+      Walk near the <strong>gravel garden</strong> and press <strong>R</strong> to rake.
+    </aside>
+
+    <div class="world-viewport" id="viewport">
+      <div id="world">
+        <div class="island"></div>
+        <div class="path"></div>
+        <div class="pond"></div>
+        <div class="bridge"></div>
+
+        <div class="tree a"></div>
+        <div class="tree b"></div>
+        <div class="tree c"></div>
+        <div class="tree d"></div>
+
+        <div class="flower-patch flowers-a"></div>
+        <div class="flower-patch flowers-b"></div>
+        <div class="flower-patch flowers-c"></div>
+
+        <section class="garden-bed bed-a">
+          <div class="plots" id="plotsA"></div>
+        </section>
+
+        <section class="garden-bed bed-b">
+          <div class="plots" id="plotsB"></div>
+        </section>
+
+        <section class="garden-bed bed-c">
+          <div class="plots" id="plotsC"></div>
+        </section>
+
+        <button class="rake-zone" id="rakeZone" aria-label="Gravel garden. Press R nearby to rake.">
+          <div class="gravel-lines"></div>
+          <div class="rake-stone stone-a"></div>
+          <div class="rake-stone stone-b"></div>
+          <div class="rake-stone stone-c"></div>
+        </button>
+
+        <div id="player">
+          <div class="player-shadow"></div>
+          <div class="player-legs"></div>
+          <div class="player-body"></div>
+          <div class="player-head"></div>
+          <div class="player-hair"></div>
+          <div class="player-hat"></div>
+          <div class="player-face"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="prompt" id="prompt">Walk closer to the gravel garden to rake.</div>
+
+    <section class="bottom-ui">
+      <div class="tip-card" id="tip">
+        <strong>Garden party time!</strong> Select a seed, then click an empty garden square to plant it.
+      </div>
+
+      <div class="shop" id="shop"></div>
+
+      <div class="time-card">
+        <small>DAY / NIGHT CYCLE</small>
+        <strong id="clock">Morning · 8:00 AM</strong>
+        <div class="time-track">
+          <div class="time-fill" id="timeFill"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const world = document.getElementById("world");
+    const viewport = document.getElementById("viewport");
+    const player = document.getElementById("player");
+    const rakeZone = document.getElementById("rakeZone");
+    const promptEl = document.getElementById("prompt");
+    const coinsEl = document.getElementById("coins");
+    const plantedEl = document.getElementById("planted");
+    const levelEl = document.getElementById("level");
+    const clockEl = document.getElementById("clock");
+    const timeFill = document.getElementById("timeFill");
+    const nightOverlay = document.getElementById("nightOverlay");
+    const stars = document.getElementById("stars");
+    const tip = document.getElementById("tip");
+    const shop = document.getElementById("shop");
+
+    const seeds = {
+      carrot: {
+        name: "Carrot",
+        icon: "🥕",
+        cost: 2,
+        reward: 6,
+        grow: 4200
+      },
+      strawberry: {
+        name: "Strawberry",
+        icon: "🍓",
+        cost: 4,
+        reward: 12,
+        grow: 5600
+      },
+      tulip: {
+        name: "Tulip",
+        icon: "🌷",
+        cost: 6,
+        reward: 18,
+        grow: 6900
+      },
+      pumpkin: {
+        name: "Pumpkin",
+        icon: "🎃",
+        cost: 9,
+        reward: 28,
+        grow: 8900
+      },
+      corn: {
+        name: "Corn",
+        icon: "🌽",
+        cost: 11,
+        reward: 34,
+        grow: 9600
+      },
+      watermelon: {
+        name: "Watermelon",
+        icon: "🍉",
+        cost: 14,
+        reward: 45,
+        grow: 11200
+      },
+      blueberry: {
+        name: "Blueberry",
+        icon: "🫐",
+        cost: 16,
+        reward: 54,
+        grow: 11800
+      },
+      sunflower: {
+        name: "Sunflower",
+        icon: "🌻",
+        cost: 20,
+        reward: 70,
+        grow: 13200
+      },
+      mushroom: {
+        name: "Mushroom",
+        icon: "🍄",
+        cost: 23,
+        reward: 82,
+        grow: 14300
+      },
+      cactus: {
+        name: "Cactus",
+        icon: "🌵",
+        cost: 27,
+        reward: 98,
+        grow: 15500
+      },
+      grape: {
+        name: "Grape",
+        icon: "🍇",
+        cost: 32,
+        reward: 120,
+        grow: 17100
+      },
+      crystal: {
+        name: "Crystal Bloom",
+        icon: "💎",
+        cost: 45,
+        reward: 190,
+        grow: 20500
+      }
+    };
+
+    let coins = 30;
+    let totalPlanted = 0;
+    let harvested = 0;
+    let selectedSeed = "carrot";
+
+    let playerX = 49;
+    let playerY = 47;
+    let pressedKeys = {};
+    let isRaking = false;
+    let rakeCooldown = false;
+    let day = 0.24;
+    let lastFrame = 0;
+
+    function buildShop() {
+      Object.entries(seeds).forEach(([key, seed]) => {
+        const button = document.createElement("button");
+        button.className = "seed-button";
+        button.type = "button";
+        button.dataset.seed = key;
+
+        button.innerHTML = `
+          <span class="seed-icon">${seed.icon}</span>
+          <span class="seed-name">${seed.name}</span>
+          <span class="seed-cost">${seed.cost} 🪙</span>
+        `;
+
+        button.addEventListener("click", () => {
+          selectedSeed = key;
+
+          document.querySelectorAll(".seed-button").forEach(item => {
+            item.classList.toggle("selected", item === button);
+          });
+
+          tip.innerHTML = `<strong>${seed.name} selected.</strong> It costs ${seed.cost} coins and earns ${seed.reward} coins when harvested.`;
+        });
+
+        shop.appendChild(button);
+      });
+
+      document.querySelector('.seed-button[data-seed="carrot"]').classList.add("selected");
+    }
+
+    function buildPlots(id) {
+      const container = document.getElementById(id);
+
+      for (let i = 0; i < 9; i++) {
+        const plot = document.createElement("button");
+        plot.type = "button";
+        plot.className = "plot";
+        plot.dataset.state = "empty";
+        plot.setAttribute("aria-label", "Empty garden plot");
+
+        plot.addEventListener("click", () => interactPlot(plot));
+        container.appendChild(plot);
+      }
+    }
+
+    function interactPlot(plot) {
+      if (isRaking) {
+        showFloat("Finish raking first!", plot, "#ffd5de");
+        return;
+      }
+
+      if (plot.dataset.state === "empty") {
+        plant(plot);
+        return;
+      }
+
+      if (plot.dataset.state === "ready") {
+        harvest(plot);
+        return;
+      }
+
+      showFloat("Growing...", plot, "#d8ffd9");
+    }
+
+    function plant(plot) {
+      const seed = seeds[selectedSeed];
+
+      if (coins < seed.cost) {
+        showFloat("Need more coins!", plot, "#ff9fac");
+        tip.innerHTML = "<strong>Not enough coins.</strong> Harvest crops or rake the gravel garden for bonus coins.";
+        return;
+      }
+
+      coins -= seed.cost;
+      totalPlanted += 1;
+
+      plot.dataset.state = "seed";
+      plot.dataset.crop = selectedSeed;
+      plot.setAttribute("aria-label", `${seed.name} seed growing`);
+
+      updateUI();
+      showFloat(`Planted ${seed.icon}`, plot, "#d9ffbe");
+      burst(plot, ["#fff1a2", "#8fffad", "#ffc4d9"]);
+
+      setTimeout(() => {
+        if (plot.dataset.state === "seed") {
+          plot.dataset.state = "sprout";
+          showFloat("Sprouting!", plot, "#a9ffbd");
+        }
+      }, seed.grow * 0.4);
+
+      setTimeout(() => {
+        if (plot.dataset.state === "seed" || plot.dataset.state === "sprout") {
+          plot.dataset.state = "ready";
+          plot.setAttribute("aria-label", `Ready ${seed.name}. Click to harvest.`);
+          showFloat("Ready!", plot, "#fff3aa");
+          burst(plot, ["#fff3a0", "#d8ffb2", "#ffffff"]);
+        }
+      }, seed.grow);
+    }
+
+    function harvest(plot) {
+      const seed = seeds[plot.dataset.crop];
+
+      coins += seed.reward;
+      harvested += 1;
+
+      plot.dataset.state = "empty";
+      plot.removeAttribute("data-crop");
+      plot.setAttribute("aria-label", "Empty garden plot");
+
+      updateUI();
+      showFloat(`+${seed.reward} 🪙`, plot, "#fff19d");
+      burst(plot, ["#fff09a", "#ffffff", "#a6ffc4"]);
+
+      if (harvested % 5 === 0) {
+        coins += 15;
+        updateUI();
+        showFloat("LEVEL UP! +15 🪙", plot, "#bfeaff");
+        tip.innerHTML = "<strong>Garden level up!</strong> Your garden party is getting more legendary.";
+      } else {
+        tip.innerHTML = `<strong>${seed.name} harvested!</strong> You earned ${seed.reward} coins.`;
+      }
+    }
+
+    function updateUI() {
+      coinsEl.textContent = coins;
+      plantedEl.textContent = totalPlanted;
+      levelEl.textContent = Math.floor(harvested / 5) + 1;
+
+      document.querySelectorAll(".seed-button").forEach(button => {
+        button.disabled = coins < seeds[button.dataset.seed].cost;
+      });
+    }
+
+    function worldPointToScreen(xPercent, yPercent) {
+      const rect = world.getBoundingClientRect();
+
+      return {
+        x: rect.left + rect.width * (xPercent / 100),
+        y: rect.top + rect.height * (yPercent / 100)
+      };
+    }
+
+    function showFloat(text, element, color = "#fff5a7") {
+      const rect = element.getBoundingClientRect();
+      const float = document.createElement("div");
+
+      float.className = "float-text";
+      float.textContent = text;
+      float.style.left = `${rect.left + rect.width / 2}px`;
+      float.style.top = `${rect.top + rect.height / 2}px`;
+      float.style.color = color;
+
+      document.body.appendChild(float);
+      setTimeout(() => float.remove(), 1050);
+    }
+
+    function showFloatAt(text, x, y, color = "#fff5a7") {
+      const float = document.createElement("div");
+
+      float.className = "float-text";
+      float.textContent = text;
+      float.style.left = `${x}px`;
+      float.style.top = `${y}px`;
+      float.style.color = color;
+
+      document.body.appendChild(float);
+      setTimeout(() => float.remove(), 1050);
+    }
+
+    function burst(element, colors) {
+      const rect = element.getBoundingClientRect();
+      const startX = rect.left + rect.width / 2;
+      const startY = rect.top + rect.height / 2;
+
+      for (let i = 0; i < 11; i++) {
+        const particle = document.createElement("div");
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 18 + Math.random() * 45;
+
+        particle.className = "particle";
+        particle.style.left = `${startX}px`;
+        particle.style.top = `${startY}px`;
+        particle.style.background = colors[i % colors.length];
+        particle.style.setProperty("--x", `${Math.cos(angle) * distance}px`);
+        particle.style.setProperty("--y", `${Math.sin(angle) * distance}px`);
+
+        document.body.appendChild(particle);
+        setTimeout(() => particle.remove(), 800);
+      }
+    }
+
+    function playerNearGravel() {
+      const dx = playerX - 76;
+      const dy = playerY - 28;
+      return Math.sqrt(dx * dx + dy * dy) < 18;
+    }
+
+    function startRaking() {
+      if (rakeCooldown || !playerNearGravel()) return;
+
+      rakeCooldown = true;
+      isRaking = true;
+      rakeZone.classList.add("active");
+      document.body.classList.add("raking");
+
+      const screen = worldPointToScreen(76, 28);
+
+      promptEl.classList.remove("show");
+      tip.innerHTML = "<strong>So satisfying...</strong> Your rake is making perfect circles in the gravel.";
+      showFloatAt("RAKE! +8 🪙", screen.x, screen.y, "#fff2a2");
+
+      coins += 8;
+      updateUI();
+
+      const originalTransform = world.style.transform;
+      world.style.transform = `${originalTransform} scale(1.12)`;
+
+      for (let i = 0; i < 25; i++) {
+        setTimeout(() => {
+          const fakeRect = rakeZone.getBoundingClientRect();
+          const particle = document.createElement("div");
+
+          particle.className = "particle";
+          particle.style.left = `${fakeRect.left + fakeRect.width * (0.15 + Math.random() * 0.7)}px`;
+          particle.style.top = `${fakeRect.top + fakeRect.height * (0.15 + Math.random() * 0.7)}px`;
+          particle.style.background = i % 2 ? "#fff4c6" : "#ded3bd";
+          particle.style.setProperty("--x", `${-26 + Math.random() * 52}px`);
+          particle.style.setProperty("--y", `${-18 + Math.random() * 36}px`);
+
+          document.body.appendChild(particle);
+          setTimeout(() => particle.remove(), 800);
+        }, i * 35);
+      }
+
+      setTimeout(() => {
+        isRaking = false;
+        rakeZone.classList.remove("active");
+        document.body.classList.remove("raking");
+      }, 1500);
+
+      setTimeout(() => {
+        rakeCooldown = false;
+      }, 2600);
+    }
+
+    function updateMovement(delta) {
+      if (isRaking) return;
+
+      const speed = 0.023 * delta;
+      let dx = 0;
+      let dy = 0;
+
+      if (pressedKeys["w"] || pressedKeys["arrowup"]) dy -= speed;
+      if (pressedKeys["s"] || pressedKeys["arrowdown"]) dy += speed;
+      if (pressedKeys["a"] || pressedKeys["arrowleft"]) dx -= speed;
+      if (pressedKeys["d"] || pressedKeys["arrowright"]) dx += speed;
+
+      const moving = dx !== 0 || dy !== 0;
+
+      playerX = Math.max(9, Math.min(91, playerX + dx));
+      playerY = Math.max(11, Math.min(88, playerY + dy));
+
+      player.style.left = `${playerX}%`;
+      player.style.top = `${playerY}%`;
+
+      document.body.classList.toggle("walking", moving);
+
+      const cameraX = (playerX - 50) * -0.055;
+      const cameraY = (playerY - 50) * -0.035;
+      const scale = playerNearGravel() ? 1.04 : 1;
+
+      world.style.transform =
+        `translate(calc(-50% + ${cameraX}px), calc(-50% + ${cameraY}px)) scale(${scale})`;
+    }
+
+    function updateDayNight(delta) {
+      day = (day + delta * 0.0000063) % 1;
+
+      const sun = Math.sin(day * Math.PI * 2 - Math.PI / 2);
+      const daylight = Math.max(0, (sun + 0.22) / 1.22);
+      const darkness = 0.67 * (1 - daylight);
+
+      nightOverlay.style.background = `rgba(9, 20, 55, ${darkness})`;
+      stars.style.opacity = Math.max(0, (darkness - 0.25) * 2.25);
+
+      const totalHours = (day * 24 + 6) % 24;
+      const hour = Math.floor(totalHours);
+      const minute = Math.floor((totalHours - hour) * 60);
+      const displayHour = hour % 12 || 12;
+      const suffix = hour >= 12 ? "PM" : "AM";
+
+      let phase = "Morning";
+      if (hour >= 12 && hour < 17) phase = "Afternoon";
+      if (hour >= 17 && hour < 20) phase = "Sunset";
+      if (hour >= 20 || hour < 5) phase = "Night";
+
+      clockEl.textContent = `${phase} · ${displayHour}:${String(minute).padStart(2, "0")} ${suffix}`;
+      timeFill.style.width = `${day * 100}%`;
+    }
+
+    function updatePrompt() {
+      const closeEnough = playerNearGravel() && !isRaking;
+
+      promptEl.textContent = closeEnough
+        ? "Press R to enter satisfying rake mode 🪨"
+        : "Walk around, plant crops, and discover the gravel garden.";
+
+      promptEl.classList.toggle("show", closeEnough);
+    }
+
+    function animate(time) {
+      const delta = Math.min(35, time - lastFrame || 16);
+      lastFrame = time;
+
+      updateMovement(delta);
+      updateDayNight(delta);
+      updatePrompt();
+
+      requestAnimationFrame(animate);
+    }
+
+    document.addEventListener("keydown", event => {
+      const key = event.key.toLowerCase();
+
+      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
+        event.preventDefault();
+        pressedKeys[key] = true;
+      }
+
+      if (key === "r") {
+        startRaking();
+      }
+    });
+
+    document.addEventListener("keyup", event => {
+      pressedKeys[event.key.toLowerCase()] = false;
+    });
+
+    rakeZone.addEventListener("click", () => {
+      if (playerNearGravel()) {
+        startRaking();
+      } else {
+        const rect = rakeZone.getBoundingClientRect();
+        showFloatAt("Walk closer first!", rect.left + rect.width / 2, rect.top + rect.height / 2, "#ffd2d8");
+      }
+    });
+
+    buildShop();
+    buildPlots("plotsA");
+    buildPlots("plotsB");
+    buildPlots("plotsC");
+    updateUI();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
