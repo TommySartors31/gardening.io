@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gardening.io — Cozy Garden World</title>
+
+  <style>
+    :root {
+      --ui-bg: rgba(14, 27, 37, 0.72);
+      --ui-border: rgba(255, 255, 255, 0.18);
+      --text: #f9fff5;
+      --muted: #d8eadc;
+      --gold: #ffe38a;
+      --mint: #8dffb3;
+      --pink: #ffb1cf;
+      --danger: #ff8799;
+      --shadow: rgba(3, 12, 21, 0.34);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      min-height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: "Trebuchet MS", Arial, sans-serif;
+      color: var(--text);
+      background: #1a6a8e;
+      touch-action: manipulation;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    #game {
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      user-select: none;
+    }
+
+    .sky {
+      position: absolute;
+      inset: 0;
+      z-index: -10;
+      background:
+        radial-gradient(circle at 70% 16%, rgba(255, 250, 189, 0.82) 0 4%, transparent 5%),
+        linear-gradient(#71c9ff 0%, #a5dbff 45%, #d8f2ff 100%);
+      transition: filter 0.5s ease;
+    }
+
+    .sky::before,
+    .sky::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.78);
+      filter: blur(1px);
+      animation: clouds 30s linear infinite;
+    }
+
+    .sky::before {
+      width: 210px;
+      height: 45px;
+      top: 15%;
+      left: -100px;
+      box-shadow:
+        65px -16px 0 11px rgba(255, 255, 255, 0.78),
+        135px 1px 0 4px rgba(255, 255, 255, 0.78),
+        485px 190px 0 2px rgba(255, 255, 255, 0.55),
+        545px 173px 0 18px rgba(255, 255, 255, 0.55);
+    }
+
+    .sky::after {
+      width: 150px;
+      height: 34px;
+      top: 33%;
+      left: -200px;
+      opacity: 0.58;
+      animation-duration: 42s;
+      animation-delay: -12s;
+      box-shadow:
+        50px -12px 0 8px rgba(255, 255, 255, 0.78),
+        105px 0 0 4px rgba(255, 255, 255, 0.78);
+    }
+
+    @keyframes clouds {
+      to {
+        transform: translateX(calc(100vw + 360px));
+      }
+    }
+
+    .day-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: -2;
+      pointer-events: none;
+      background: rgba(7, 15, 48, 0);
+      transition: background 0.2s linear;
+      mix-blend-mode: multiply;
+    }
+
+    .sparkles {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 1s ease;
+      background-image:
+        radial-gradient(circle, #ffffff 0 1px, transparent 2px),
+        radial-gradient(circle, #dce9ff 0 1.5px, transparent 2px),
+        radial-gradient(circle, #ffffff 0 1px, transparent 2px);
+      background-size: 120px 150px, 170px 120px, 90px 180px;
+      background-position: 13px 30px, 70px 75px, 37px 8px;
+      animation: twinkle 2.4s ease-in-out infinite alternate;
+    }
+
+    @keyframes twinkle {
+      from {
+        filter: brightness(0.72);
+      }
+
+      to {
+        filter: brightness(1.5);
+      }
+    }
+
+    .mountains {
+      position: absolute;
+      z-index: -3;
+      left: -10vw;
+      right: -10vw;
+      bottom: 31vh;
+      height: 30vh;
+      opacity: 0.78;
+      background:
+        linear-gradient(135deg, transparent 49%, #7fa89a 50%) 0 100% / 32% 100%,
+        linear-gradient(45deg, transparent 49%, #91b5a5 50%) 22% 100% / 34% 100%,
+        linear-gradient(135deg, transparent 49%, #658f83 50%) 49% 100% / 34% 100%,
+        linear-gradient(45deg, transparent 49%, #78a396 50%) 70% 100% / 34% 100%;
+      filter: blur(0.2px);
+    }
+
+    .hud {
+      position: fixed;
+      z-index: 30;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      pointer-events: none;
+    }
+
+    .brand,
+    .resource-bar,
+    .tip {
+      border: 1px solid var(--ui-border);
+      background: var(--ui-bg);
+      box-shadow: 0 12px 35px var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      max-width: 290px;
+      padding: 12px 16px;
+      border-radius: 18px;
+    }
+
+    .brand small {
+      display: block;
+      color: #c8ffe0;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      font-size: 0.65rem;
+    }
+
+    .brand h1 {
+      margin: 2px 0 0;
+      font-size: clamp(1.3rem, 3vw, 1.9rem);
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .resource-bar {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 10px 13px;
+      border-radius: 16px;
+      pointer-events: auto;
+    }
+
+    .resource {
+      display: grid;
+      grid-template-columns: auto auto;
+      align-items: center;
+      gap: 6px;
+      min-width: 62px;
+      font-weight: 900;
+    }
+
+    .resource .icon {
+      font-size: 1.22rem;
+      filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+    }
+
+    .resource strong {
+      color: var(--gold);
+      font-size: 1.05rem;
+    }
+
+    .world-wrap {
+      position: absolute;
+      left: 50%;
+      top: 53%;
+      width: min(1150px, 145vw);
+      height: min(780px, 110vw);
+      transform: translate(-50%, -50%);
+      perspective: 1200px;
+      pointer-events: none;
+    }
+
+    .world {
+      position: absolute;
+      inset: 0;
+      transform-style: preserve-3d;
+      transform: rotateX(57deg) rotateZ(0deg);
+      transition: transform 0.2s ease-out;
+    }
+
+    .grass-island {
+      position: absolute;
+      inset: 6% 4%;
+      overflow: hidden;
+      border-radius: 42% 48% 44% 52%;
+      background:
+        radial-gradient(circle at 22% 26%, rgba(214, 255, 161, 0.45) 0 2%, transparent 2.5%),
+        radial-gradient(circle at 74% 68%, rgba(177, 244, 117, 0.38) 0 1.5%, transparent 2.5%),
+        radial-gradient(circle at 47% 42%, rgba(255, 255, 200, 0.24) 0 1%, transparent 2%),
+        linear-gradient(135deg, #7edb73, #4bbf6e 47%, #35a665);
+      border: 16px solid #78c662;
+      box-shadow:
+        inset 0 0 0 5px rgba(226, 255, 161, 0.2),
+        0 30px 0 #277347,
+        0 48px 40px rgba(7, 34, 33, 0.37);
+    }
+
+    .grass-island::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0.4;
+      background-image:
+        radial-gradient(ellipse, rgba(255, 255, 196, 0.85) 0 1px, transparent 2px),
+        radial-gradient(ellipse, rgba(22, 118, 66, 0.85) 0 1px, transparent 2px);
+      background-size: 31px 29px, 37px 41px;
+      background-position: 4px 11px, 13px 2px;
+    }
+
+    .path {
+      position: absolute;
+      z-index: 2;
+      left: 43%;
+      top: -6%;
+      width: 16%;
+      height: 116%;
+      transform: rotate(5deg);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 30% 10%, #ffe1a7 0 5%, transparent 6%),
+        radial-gradient(circle at 80% 31%, #f6c981 0 4%, transparent 5%),
+        radial-gradient(circle at 30% 59%, #ffe6af 0 4%, transparent 5%),
+        radial-gradient(circle at 73% 81%, #e5ae62 0 4%, transparent 5%),
+        #eac174;
+      box-shadow: inset 6px 0 0 rgba(255, 240, 183, 0.35);
+      opacity: 0.95;
+    }
+
+    .pond {
+      position: absolute;
+      z-index: 3;
+      left: 9%;
+      top: 18%;
+      width: 25%;
+      height: 25%;
+      border: 12px solid #a9efc4;
+      border-radius: 46% 54% 57% 43%;
+      background:
+        radial-gradient(circle at 27% 31%, rgba(255, 255, 255, 0.66) 0 2%, transparent 3%),
+        radial-gradient(circle at 67% 56%, rgba(255, 255, 255, 0.54) 0 2%, transparent 3%),
+        repeating-radial-gradient(ellipse at center, #79e7ed 0 8%, #4cc6dc 9% 15%);
+      box-shadow:
+        inset 0 0 20px #228bad,
+        0 5px 0 rgba(17, 107, 89, 0.2);
+      animation: pond 4s ease-in-out infinite alternate;
+    }
+
+    @keyframes pond {
+      to {
+        filter: saturate(1.15) brightness(1.08);
+      }
+    }
+
+    .bridge {
+      position: absolute;
+      z-index: 6;
+      left: 25%;
+      top: 31%;
+      width: 18%;
+      height: 7%;
+      transform: rotate(-21deg);
+      border-radius: 10px;
+      background: repeating-linear-gradient(90deg, #b76c35 0 14px, #e49a51 15px 25px);
+      border: 4px solid #7d452a;
+      box-shadow: 0 5px 0 #713d2a;
+    }
+
+    .bridge::before,
+    .bridge::after {
+      content: "";
+      position: absolute;
+      top: -19px;
+      bottom: -19px;
+      width: 5px;
+      border-radius: 99px;
+      background: #774027;
+      box-shadow: 0 0 0 2px rgba(255, 217, 148, 0.32);
+    }
+
+    .bridge::before {
+      left: 9px;
+    }
+
+    .bridge::after {
+      right: 9px;
+    }
+
+    .garden-bed {
+      position: absolute;
+      z-index: 5;
+      width: 27%;
+      height: 25%;
+      padding: 7px;
+      border: 9px solid #965a35;
+      border-radius: 12px;
+      background: #7a472f;
+      box-shadow:
+        inset 0 0 0 3px #d89856,
+        0 9px 0 rgba(77, 40, 25, 0.35);
+    }
+
+    .garden-bed::before {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border-radius: 5px;
+      background:
+        radial-gradient(circle, rgba(255, 209, 149, 0.23) 0 1px, transparent 2px),
+        #76452e;
+      background-size: 18px 18px;
+    }
+
+    .bed-one {
+      left: 15%;
+      top: 55%;
+      transform: rotate(-8deg);
+    }
+
+    .bed-two {
+      left: 60%;
+      top: 48%;
+      transform: rotate(9deg);
+    }
+
+    .plots {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 4px;
+      height: 100%;
+    }
+
+    .plot {
+      position: relative;
+      cursor: pointer;
+      pointer-events: auto;
+      min-width: 0;
+      border: 1px solid rgba(255, 231, 186, 0.16);
+      border-radius: 7px;
+      background: rgba(61, 28, 17, 0.26);
+      transition: transform 0.16s ease, filter 0.16s ease;
+    }
+
+    .plot:hover {
+      transform: translateY(-2px) scale(1.05);
+      filter: brightness(1.18);
+    }
+
+    .plot[data-state="seed"]::after {
+      content: "•";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      color: #e1bd7e;
+      font-size: 1.8rem;
+      animation: seedWiggle 1s ease-in-out infinite alternate;
+    }
+
+    .plot[data-state="sprout"]::after {
+      content: "🌱";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -53%);
+      font-size: clamp(1rem, 2.8vw, 2rem);
+      filter: drop-shadow(0 3px 1px rgba(29, 74, 37, 0.5));
+      animation: sproutSway 1.9s ease-in-out infinite alternate;
+    }
+
+    .plot[data-state="ready"]::after {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -55%);
+      font-size: clamp(1.15rem, 3.5vw, 2.45rem);
+      filter: drop-shadow(0 4px 1px rgba(29, 74, 37, 0.5));
+      animation: cropBounce 1.2s ease-in-out infinite alternate;
+    }
+
+    .plot[data-crop="carrot"][data-state="ready"]::after {
+      content: "🥕";
+    }
+
+    .plot[data-crop="berry"][data-state="ready"]::after {
+      content: "🍓";
+    }
+
+    .plot[data-crop="flower"][data-state="ready"]::after {
+      content: "🌷";
+    }
+
+    @keyframes seedWiggle {
+      from {
+        transform: translate(-50%, -50%) rotate(-8deg);
+      }
+
+      to {
+        transform: translate(-50%, -50%) rotate(8deg);
+      }
+    }
+
+    @keyframes sproutSway {
+      from {
+        transform: translate(-50%, -53%) rotate(-8deg);
+      }
+
+      to {
+        transform: translate(-50%, -53%) rotate(8deg);
+      }
+    }
+
+    @keyframes cropBounce {
+      from {
+        transform: translate(-50%, -55%) translateY(-2px) rotate(-4deg);
+      }
+
+      to {
+        transform: translate(-50%, -55%) translateY(3px) rotate(4deg);
+      }
+    }
+
+    .tree {
+      position: absolute;
+      z-index: 5;
+      width: 11%;
+      aspect-ratio: 0.86;
+      pointer-events: none;
+      transform-origin: center bottom;
+      animation: treeSway 3.7s ease-in-out infinite alternate;
+    }
+
+    .tree::before {
+      content: "";
+      position: absolute;
+      z-index: 0;
+      width: 21%;
+      height: 47%;
+      left: 40%;
+      bottom: 0;
+      border-radius: 12px;
+      background: linear-gradient(90deg, #6e3d26, #b8743d, #6d3d29);
+      box-shadow: inset 4px 0 0 rgba(255, 222, 157, 0.21);
+    }
+
+    .tree::after {
+      content: "";
+      position: absolute;
+      z-index: 1;
+      width: 100%;
+      height: 73%;
+      left: 0;
+      top: 0;
+      border-radius: 48% 52% 43% 57%;
+      background:
+        radial-gradient(circle at 30% 31%, #c2ff96 0 10%, transparent 11%),
+        radial-gradient(circle at 65% 45%, #7dde6e 0 11%, transparent 12%),
+        radial-gradient(circle at 48% 65%, #4cb964 0 18%, transparent 19%),
+        linear-gradient(135deg, #91e879, #3eaa59);
+      box-shadow:
+        inset -9px -11px 0 rgba(20, 115, 65, 0.25),
+        0 9px 0 rgba(32, 100, 58, 0.18);
+    }
+
+    @keyframes treeSway {
+      from {
+        transform: rotate(-2deg);
+      }
+
+      to {
+        transform: rotate(2deg);
+      }
+    }
+
+    .tree-one {
+      left: 8%;
+      top: 53%;
+    }
+
+    .tree-two {
+      left: 76%;
+      top: 14%;
+      width: 13%;
+      animation-delay: -1.5s;
+    }
+
+    .tree-three {
+      left: 79%;
+      top: 69%;
+      width: 9%;
+      animation-delay: -2s;
+    }
+
+    .stone {
+      position: absolute;
+      z-index: 4;
+      width: 4%;
+      aspect-ratio: 1.25;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #d8e7db, #7d9b91);
+      box-shadow: 0 3px 0 rgba(42, 81, 70, 0.28);
+    }
+
+    .stone-one {
+      left: 37%;
+      top: 25%;
+      transform: rotate(17deg);
+    }
+
+    .stone-two {
+      left: 50%;
+      top: 72%;
+      transform: rotate(-23deg);
+    }
+
+    .stone-three {
+      left: 72%;
+      top: 37%;
+      transform: rotate(28deg);
+    }
+
+    .flower-clump {
+      position: absolute;
+      z-index: 5;
+      width: 8%;
+      height: 8%;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 20% 25%, #fff5a2 0 10%, #ff77bd 11% 19%, transparent 20%),
+        radial-gradient(circle at 52% 59%, #fff5a2 0 10%, #a876ff 11% 19%, transparent 20%),
+        radial-gradient(circle at 81% 28%, #fff5a2 0 10%, #ff7c95 11% 19%, transparent 20%);
+      filter: drop-shadow(0 3px 0 rgba(47, 134, 65, 0.47));
+      animation: flowerDance 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes flowerDance {
+      to {
+        transform: rotate(5deg) scale(1.08);
+      }
+    }
+
+    .flowers-one {
+      left: 33%;
+      top: 15%;
+    }
+
+    .flowers-two {
+      left: 64%;
+      top: 75%;
+      animation-delay: -1s;
+    }
+
+    .player {
+      position: absolute;
+      z-index: 20;
+      left: 49%;
+      top: 46%;
+      width: 8.4%;
+      aspect-ratio: 0.63;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      transition: filter 0.3s ease;
+    }
+
+    .player-shadow {
+      position: absolute;
+      width: 80%;
+      height: 19%;
+      left: 10%;
+      bottom: -3%;
+      border-radius: 50%;
+      background: rgba(21, 70, 42, 0.4);
+      filter: blur(3px);
+    }
+
+    .player-body {
+      position: absolute;
+      z-index: 2;
+      width: 62%;
+      height: 61%;
+      left: 19%;
+      bottom: 8%;
+      border-radius: 42% 42% 28% 28%;
+      background: linear-gradient(90deg, #ff94b7, #ff7aa7 55%, #d94976);
+      border: 3px solid rgba(117, 47, 59, 0.28);
+      box-shadow: inset 7px 0 rgba(255, 222, 229, 0.27);
+    }
+
+    .player-head {
+      position: absolute;
+      z-index: 3;
+      width: 66%;
+      aspect-ratio: 0.95;
+      left: 17%;
+      top: 9%;
+      border-radius: 45% 45% 43% 43%;
+      background: #ffd2a7;
+      border: 3px solid rgba(125, 77, 60, 0.22);
+    }
+
+    .player-hair {
+      position: absolute;
+      z-index: 4;
+      width: 76%;
+      height: 37%;
+      left: 12%;
+      top: 0;
+      border-radius: 55% 55% 32% 32%;
+      background: #64372f;
+      box-shadow: inset 10px 0 rgba(255, 179, 114, 0.16);
+    }
+
+    .player-hat {
+      position: absolute;
+      z-index: 6;
+      width: 101%;
+      height: 27%;
+      left: 0;
+      top: -8%;
+      border-radius: 48% 48% 27% 27%;
+      background: #f7d568;
+      border: 3px solid rgba(125, 90, 35, 0.3);
+      box-shadow: inset 0 -6px rgba(199, 145, 42, 0.28);
+    }
+
+    .player-hat::after {
+      content: "";
+      position: absolute;
+      width: 130%;
+      height: 24%;
+      left: -15%;
+      bottom: -5px;
+      border-radius: 50%;
+      background: #f4c955;
+      border: 2px solid rgba(125, 90, 35, 0.25);
+    }
+
+    .player-face {
+      position: absolute;
+      z-index: 5;
+      left: 35%;
+      top: 38%;
+      display: flex;
+      gap: 12px;
+    }
+
+    .player-face::before,
+    .player-face::after {
+      content: "";
+      width: 4px;
+      height: 6px;
+      border-radius: 99px;
+      background: #5d3c38;
+    }
+
+    .walk .player-body {
+      animation: bodyBob 0.28s ease-in-out infinite alternate;
+    }
+
+    .walk .player {
+      animation: playerLean 0.28s ease-in-out infinite alternate;
+    }
+
+    @keyframes bodyBob {
+      to {
+        transform: translateY(-3px);
+      }
+    }
+
+    @keyframes playerLean {
+      to {
+        transform: translate(-50%, -50%) rotate(-2deg);
+      }
+    }
+
+    .float-text {
+      position: fixed;
+      z-index: 80;
+      pointer-events: none;
+      color: #fff7ac;
+      font-size: 1.15rem;
+      font-weight: 900;
+      text-shadow: 0 3px 3px rgba(21, 44, 33, 0.55);
+      animation: floatUp 0.95s ease-out forwards;
+    }
+
+    @keyframes floatUp {
+      from {
+        opacity: 0;
+        transform: translate(-50%, 4px) scale(0.75);
+      }
+
+      20% {
+        opacity: 1;
+      }
+
+      to {
+        opacity: 0;
+        transform: translate(-50%, -62px) scale(1.1);
+      }
+    }
+
+    .bottom-ui {
+      position: fixed;
+      z-index: 35;
+      left: 16px;
+      right: 16px;
+      bottom: 16px;
+      display: grid;
+      grid-template-columns: minmax(190px, 280px) 1fr minmax(190px, 280px);
+      gap: 15px;
+      align-items: end;
+      pointer-events: none;
+    }
+
+    .tip {
+      padding: 14px;
+      border-radius: 17px;
+      color: var(--muted);
+      font-size: 0.83rem;
+      line-height: 1.4;
+    }
+
+    .tip strong {
+      color: var(--mint);
+    }
+
+    .shop {
+      pointer-events: auto;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px;
+      border: 1px solid var(--ui-border);
+      border-radius: 20px;
+      background: rgba(14, 27, 37, 0.74);
+      box-shadow: 0 12px 35px var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .shop-item {
+      position: relative;
+      min-width: 102px;
+      padding: 10px 9px 9px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 14px;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.07);
+      cursor: pointer;
+      transition: transform 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+    }
+
+    .shop-item:hover:not(:disabled) {
+      transform: translateY(-6px) scale(1.03);
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .shop-item:active:not(:disabled) {
+      transform: translateY(-2px);
+    }
+
+    .shop-item:disabled {
+      opacity: 0.44;
+      cursor: not-allowed;
+    }
+
+    .shop-icon {
+      display: block;
+      margin-bottom: 2px;
+      font-size: 1.48rem;
+    }
+
+    .shop-name {
+      display: block;
+      font-weight: 900;
+      font-size: 0.76rem;
+    }
+
+    .shop-cost {
+      display: block;
+      margin-top: 4px;
+      color: var(--gold);
+      font-size: 0.72rem;
+      font-weight: 900;
+    }
+
+    .selected {
+      border-color: rgba(154, 255, 186, 0.94);
+      box-shadow: 0 0 0 3px rgba(98, 238, 150, 0.19);
+      background: rgba(93, 220, 137, 0.18);
+    }
+
+    .time-card {
+      padding: 12px 14px;
+      border: 1px solid var(--ui-border);
+      border-radius: 17px;
+      text-align: right;
+      background: var(--ui-bg);
+      box-shadow: 0 12px 35px var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .time-card small {
+      display: block;
+      color: var(--muted);
+      font-size: 0.66rem;
+      letter-spacing: 0.1em;
+      font-weight: 900;
+    }
+
+    .time-card strong {
+      display: block;
+      margin-top: 4px;
+      color: #fff7b1;
+      font-size: 1.04rem;
+    }
+
+    .time-bar {
+      width: 100%;
+      height: 6px;
+      margin-top: 9px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .time-progress {
+      width: 50%;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #7261db, #ffcf79, #7be7ff);
+      transition: width 0.1s linear;
+    }
+
+    .help {
+      position: fixed;
+      z-index: 55;
+      right: 16px;
+      top: 92px;
+      width: min(270px, calc(100vw - 32px));
+      padding: 14px;
+      border: 1px solid var(--ui-border);
+      border-radius: 16px;
+      color: var(--muted);
+      background: rgba(14, 27, 37, 0.7);
+      box-shadow: 0 12px 35px var(--shadow);
+      backdrop-filter: blur(13px);
+      font-size: 0.78rem;
+      line-height: 1.42;
+    }
+
+    .help strong {
+      color: var(--mint);
+    }
+
+    @media (max-width: 830px) {
+      .help {
+        display: none;
+      }
+
+      .bottom-ui {
+        grid-template-columns: 1fr;
+      }
+
+      .tip,
+      .time-card {
+        display: none;
+      }
+
+      .shop {
+        justify-content: space-around;
+      }
+    }
+
+    @media (max-width: 570px) {
+      .hud {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+      }
+
+      .brand {
+        padding: 10px 12px;
+      }
+
+      .resource-bar {
+        gap: 8px;
+        padding: 9px 10px;
+      }
+
+      .resource {
+        min-width: auto;
+      }
+
+      .world-wrap {
+        top: 51%;
+        width: 172vw;
+        height: 128vw;
+      }
+
+      .bottom-ui {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+      }
+
+      .shop {
+        gap: 6px;
+        padding: 7px;
+      }
+
+      .shop-item {
+        min-width: 0;
+        flex: 1;
+        padding: 8px 4px;
+      }
+
+      .shop-name {
+        font-size: 0.65rem;
+      }
+
+      .shop-cost {
+        font-size: 0.62rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main id="game">
+    <div class="sky" id="sky"></div>
+    <div class="day-overlay" id="dayOverlay"></div>
+    <div class="sparkles" id="sparkles"></div>
+    <div class="mountains"></div>
+
+    <section class="hud">
+      <div class="brand">
+        <small>COZY GARDEN ADVENTURE</small>
+        <h1>Gardening.io</h1>
+      </div>
+
+      <div class="resource-bar">
+        <div class="resource">
+          <span class="icon">🪙</span>
+          <strong id="coins">18</strong>
+        </div>
+
+        <div class="resource">
+          <span class="icon">🌱</span>
+          <strong id="seedCount">5</strong>
+        </div>
+
+        <div class="resource">
+          <span class="icon">✨</span>
+          <strong id="level">1</strong>
+        </div>
+      </div>
+    </section>
+
+    <aside class="help">
+      <strong>Explore your garden</strong><br />
+      Move with <strong>WASD</strong> or arrow keys. Click a soil plot to plant your selected seed. Wait for it to grow, then click the crop to harvest it.
+    </aside>
+
+    <div class="world-wrap" id="worldWrap">
+      <div class="world" id="world">
+        <div class="grass-island"></div>
+        <div class="path"></div>
+        <div class="pond"></div>
+        <div class="bridge"></div>
+
+        <div class="tree tree-one"></div>
+        <div class="tree tree-two"></div>
+        <div class="tree tree-three"></div>
+
+        <div class="stone stone-one"></div>
+        <div class="stone stone-two"></div>
+        <div class="stone stone-three"></div>
+
+        <div class="flower-clump flowers-one"></div>
+        <div class="flower-clump flowers-two"></div>
+
+        <section class="garden-bed bed-one">
+          <div class="plots" id="plotsOne"></div>
+        </section>
+
+        <section class="garden-bed bed-two">
+          <div class="plots" id="plotsTwo"></div>
+        </section>
+
+        <div class="player" id="player">
+          <div class="player-shadow"></div>
+          <div class="player-body"></div>
+          <div class="player-head"></div>
+          <div class="player-hair"></div>
+          <div class="player-hat"></div>
+          <div class="player-face"></div>
+        </div>
+      </div>
+    </div>
+
+    <section class="bottom-ui">
+      <div class="tip" id="tip">
+        <strong>Goal:</strong> Grow crops, harvest them for coins, and unlock beautiful new seed types.
+      </div>
+
+      <div class="shop" id="shop">
+        <button class="shop-item selected" data-crop="carrot" data-cost="2" data-icon="🥕">
+          <span class="shop-icon">🥕</span>
+          <span class="shop-name">Carrot Seed</span>
+          <span class="shop-cost">2 coins</span>
+        </button>
+
+        <button class="shop-item" data-crop="berry" data-cost="5" data-icon="🍓">
+          <span class="shop-icon">🍓</span>
+          <span class="shop-name">Berry Seed</span>
+          <span class="shop-cost">5 coins</span>
+        </button>
+
+        <button class="shop-item" data-crop="flower" data-cost="8" data-icon="🌷">
+          <span class="shop-icon">🌷</span>
+          <span class="shop-name">Tulip Seed</span>
+          <span class="shop-cost">8 coins</span>
+        </button>
+      </div>
+
+      <div class="time-card">
+        <small>GARDEN TIME</small>
+        <strong id="clock">Morning · 7:00 AM</strong>
+        <div class="time-bar">
+          <div class="time-progress" id="timeProgress"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const game = document.getElementById("game");
+    const world = document.getElementById("world");
+    const player = document.getElementById("player");
+    const coinsEl = document.getElementById("coins");
+    const seedCountEl = document.getElementById("seedCount");
+    const levelEl = document.getElementById("level");
+    const clockEl = document.getElementById("clock");
+    const timeProgressEl = document.getElementById("timeProgress");
+    const dayOverlay = document.getElementById("dayOverlay");
+    const sparkles = document.getElementById("sparkles");
+    const tip = document.getElementById("tip");
+    const shop = document.getElementById("shop");
+
+    let coins = 18;
+    let seeds = 5;
+    let harvested = 0;
+    let selectedCrop = "carrot";
+    let playerX = 49;
+    let playerY = 46;
+    let keys = {};
+    let previousTime = 0;
+    let dayTime = 0.24;
+
+    const cropInfo = {
+      carrot: {
+        label: "Carrot",
+        cost: 2,
+        growTime: 4500,
+        reward: 5,
+        icon: "🥕"
+      },
+      berry: {
+        label: "Berry",
+        cost: 5,
+        growTime: 7000,
+        reward: 12,
+        icon: "🍓"
+      },
+      flower: {
+        label: "Tulip",
+        cost: 8,
+        growTime: 9500,
+        reward: 22,
+        icon: "🌷"
+      }
+    };
+
+    function createPlots(containerId) {
+      const container = document.getElementById(containerId);
+
+      for (let i = 0; i < 9; i++) {
+        const plot = document.createElement("button");
+        plot.className = "plot";
+        plot.type = "button";
+        plot.dataset.state = "empty";
+        plot.setAttribute("aria-label", "Empty garden plot");
+        plot.addEventListener("click", () => handlePlotClick(plot));
+        container.appendChild(plot);
+      }
+    }
+
+    function handlePlotClick(plot) {
+      const state = plot.dataset.state;
+
+      if (state === "empty") {
+        plantCrop(plot);
+        return;
+      }
+
+      if (state === "ready") {
+        harvestCrop(plot);
+        return;
+      }
+
+      if (state === "seed" || state === "sprout") {
+        showFloat("Growing...", plot);
+      }
+    }
+
+    function plantCrop(plot) {
+      const crop = cropInfo[selectedCrop];
+
+      if (coins < crop.cost) {
+        showFloat("Need more coins!", plot, "#ff9eaa");
+        tip.innerHTML = "<strong>Not enough coins.</strong> Harvest ready crops to earn more.";
+        return;
+      }
+
+      coins -= crop.cost;
+      seeds += 1;
+      plot.dataset.state = "seed";
+      plot.dataset.crop = selectedCrop;
+      plot.setAttribute("aria-label", `${crop.label} seed growing`);
+      updateUI();
+
+      showFloat(`Planted ${crop.icon}`, plot, "#d9ffd5");
+      tip.innerHTML = `<strong>${crop.label} planted!</strong> It will be ready soon.`;
+
+      setTimeout(() => {
+        if (plot.dataset.state !== "seed") return;
+        plot.dataset.state = "sprout";
+        showFloat("Sprouting!", plot, "#a8ffc2");
+      }, crop.growTime * 0.4);
+
+      setTimeout(() => {
+        if (plot.dataset.state !== "seed" && plot.dataset.state !== "sprout") return;
+        plot.dataset.state = "ready";
+        plot.setAttribute("aria-label", `Ready ${crop.label}, click to harvest`);
+        showFloat("Ready to harvest!", plot, "#fff1a0");
+      }, crop.growTime);
+    }
+
+    function harvestCrop(plot) {
+      const crop = cropInfo[plot.dataset.crop];
+
+      coins += crop.reward;
+      harvested += 1;
+
+      plot.dataset.state = "empty";
+      plot.removeAttribute("data-crop");
+      plot.setAttribute("aria-label", "Empty garden plot");
+
+      updateUI();
+      showFloat(`+${crop.reward} 🪙`, plot, "#fff09b");
+
+      if (harvested % 5 === 0) {
+        coins += 10;
+        showFloat("Garden level up! +10 🪙", plot, "#b7eaff");
+        tip.innerHTML = "<strong>Garden level up!</strong> Your garden is becoming more magical.";
+      } else {
+        tip.innerHTML = `<strong>Harvested ${crop.label}!</strong> You earned ${crop.reward} coins.`;
+      }
+    }
+
+    function showFloat(text, element, color = "#fff7ac") {
+      const rect = element.getBoundingClientRect();
+      const label = document.createElement("div");
+
+      label.className = "float-text";
+      label.textContent = text;
+      label.style.left = `${rect.left + rect.width / 2}px`;
+      label.style.top = `${rect.top + rect.height / 2}px`;
+      label.style.color = color;
+
+      document.body.appendChild(label);
+
+      setTimeout(() => label.remove(), 1000);
+    }
+
+    function updateUI() {
+      coinsEl.textContent = coins;
+      seedCountEl.textContent = seeds;
+      levelEl.textContent = Math.floor(harvested / 5) + 1;
+
+      document.querySelectorAll(".shop-item").forEach(button => {
+        const crop = cropInfo[button.dataset.crop];
+        button.disabled = coins < crop.cost;
+      });
+    }
+
+    shop.addEventListener("click", event => {
+      const button = event.target.closest(".shop-item");
+      if (!button || button.disabled) return;
+
+      selectedCrop = button.dataset.crop;
+
+      document.querySelectorAll(".shop-item").forEach(item => {
+        item.classList.toggle("selected", item === button);
+      });
+
+      const crop = cropInfo[selectedCrop];
+      tip.innerHTML = `<strong>${crop.label} selected.</strong> Click an empty soil square to plant it for ${crop.cost} coins.`;
+    });
+
+    function updatePlayer(delta) {
+      const speed = 0.022 * delta;
+      let moving = false;
+      let dx = 0;
+      let dy = 0;
+
+      if (keys["w"] || keys["arrowup"]) {
+        dy -= speed;
+        moving = true;
+      }
+
+      if (keys["s"] || keys["arrowdown"]) {
+        dy += speed;
+        moving = true;
+      }
+
+      if (keys["a"] || keys["arrowleft"]) {
+        dx -= speed;
+        moving = true;
+      }
+
+      if (keys["d"] || keys["arrowright"]) {
+        dx += speed;
+        moving = true;
+      }
+
+      playerX = Math.max(10, Math.min(90, playerX + dx));
+      playerY = Math.max(13, Math.min(86, playerY + dy));
+
+      player.style.left = `${playerX}%`;
+      player.style.top = `${playerY}%`;
+
+      world.classList.toggle("walk", moving);
+
+      const tiltX = (playerY - 50) * -0.08;
+      const tiltZ = (playerX - 50) * 0.06;
+      world.style.transform = `rotateX(${57 + tiltX}deg) rotateZ(${tiltZ}deg)`;
+    }
+
+    function updateDayNight(delta) {
+      dayTime = (dayTime + delta * 0.0000062) % 1;
+
+      const sunHeight = Math.sin(dayTime * Math.PI * 2 - Math.PI / 2);
+      const daylight = Math.max(0, (sunHeight + 0.22) / 1.22);
+      const darkness = 0.67 * (1 - daylight);
+
+      dayOverlay.style.background = `rgba(6, 14, 51, ${darkness})`;
+      sparkles.style.opacity = Math.max(0, (darkness - 0.23) * 2.15);
+
+      const hour = Math.floor((dayTime * 24 + 6) % 24);
+      const minute = Math.floor(((dayTime * 24 + 6) % 1) * 60);
+      const displayHour = hour % 12 || 12;
+      const ampm = hour >= 12 ? "PM" : "AM";
+
+      let period = "Morning";
+      if (hour >= 12 && hour < 17) period = "Afternoon";
+      if (hour >= 17 && hour < 20) period = "Sunset";
+      if (hour >= 20 || hour < 5) period = "Night";
+
+      clockEl.textContent = `${period} · ${displayHour}:${String(minute).padStart(2, "0")} ${ampm}`;
+      timeProgressEl.style.width = `${dayTime * 100}%`;
+    }
+
+    function animate(time) {
+      const delta = Math.min(40, time - previousTime || 16);
+      previousTime = time;
+
+      updatePlayer(delta);
+      updateDayNight(delta);
+
+      requestAnimationFrame(animate);
+    }
+
+    document.addEventListener("keydown", event => {
+      const key = event.key.toLowerCase();
+
+      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
+        event.preventDefault();
+        keys[key] = true;
+      }
+    });
+
+    document.addEventListener("keyup", event => {
+      keys[event.key.toLowerCase()] = false;
+    });
+
+    createPlots("plotsOne");
+    createPlots("plotsTwo");
+    updateUI();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
